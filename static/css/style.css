@@ -1,0 +1,400 @@
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: #ffffff;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header Styles */
+.header {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.header h1 {
+    font-size: 2.5rem;
+    font-weight: 300;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.header h1 i {
+    color: #4ade80;
+    margin-right: 10px;
+}
+
+.info-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.info-item {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.info-item .label {
+    display: block;
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-bottom: 5px;
+}
+
+.info-item span:last-child {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #4ade80;
+}
+
+/* Controls Styles */
+.controls {
+    display: grid;
+    grid-template-columns: auto auto auto;
+    gap: 20px;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.navigation {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.nav-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.nav-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.nav-btn:active {
+    transform: translateY(0);
+}
+
+.nav-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.play-btn.playing {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+}
+
+.tools {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.tool-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.tool-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.tool-btn.active {
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    border-color: #16a34a;
+}
+
+.speed-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-self: end;
+}
+
+.speed-control label {
+    font-weight: 600;
+}
+
+.speed-control select {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.speed-control select option {
+    background: #1e3c72;
+    color: white;
+}
+
+/* Plot Container */
+.plot-container {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    min-height: 600px;
+}
+
+#rf-plot {
+    width: 100%;
+    height: 100%;
+    min-height: 600px;
+}
+
+.loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    font-size: 1.2rem;
+    color: #4ade80;
+}
+
+.loading i {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.loading.hidden {
+    display: none;
+}
+
+/* Markers Panel */
+.markers-panel {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.markers-panel h3 {
+    margin-bottom: 15px;
+    color: #4ade80;
+}
+
+.markers-list {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.marker-item {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.marker-info {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.marker-freq {
+    font-weight: 600;
+    color: #4ade80;
+}
+
+.marker-power {
+    color: #fbbf24;
+}
+
+.marker-remove {
+    background: #ef4444;
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+.marker-remove:hover {
+    background: #dc2626;
+}
+
+.no-markers {
+    text-align: center;
+    opacity: 0.6;
+    font-style: italic;
+    padding: 20px;
+}
+
+/* Status Bar */
+.status-bar {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 15px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status-item {
+    font-size: 0.9rem;
+}
+
+#status-text {
+    color: #4ade80;
+    font-weight: 600;
+}
+
+#cursor-info {
+    opacity: 0.8;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .header h1 {
+        font-size: 2rem;
+    }
+    
+    .info-panel {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .controls {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .navigation {
+        justify-content: center;
+    }
+    
+    .tools {
+        justify-content: center;
+    }
+    
+    .speed-control {
+        justify-self: center;
+    }
+    
+    .status-bar {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .nav-btn {
+        padding: 10px 12px;
+        font-size: 1rem;
+    }
+    
+    .tool-btn {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+    }
+    
+    .info-panel {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Animation for smooth transitions */
+.plot-container,
+.controls,
+.header,
+.markers-panel,
+.status-bar {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}

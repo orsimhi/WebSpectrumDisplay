@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RF Amplitude Graph Viewer</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-signal"></i> RF Amplitude Graph Viewer</h1>
+            <div class="info-panel">
+                <div class="info-item">
+                    <span class="label">Record:</span>
+                    <span id="current-record">-</span> / <span id="total-records">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Timestamp:</span>
+                    <span id="current-timestamp">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Center Freq:</span>
+                    <span id="current-cf">-</span> MHz
+                </div>
+                <div class="info-item">
+                    <span class="label">Span:</span>
+                    <span id="current-span">-</span> MHz
+                </div>
+            </div>
+        </header>
+
+        <div class="controls">
+            <div class="navigation">
+                <button id="first-btn" class="nav-btn" title="First Record">
+                    <i class="fas fa-step-backward"></i>
+                </button>
+                <button id="prev-btn" class="nav-btn" title="Previous Record">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button id="play-btn" class="nav-btn play-btn" title="Auto Play">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button id="next-btn" class="nav-btn" title="Next Record">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <button id="last-btn" class="nav-btn" title="Last Record">
+                    <i class="fas fa-step-forward"></i>
+                </button>
+            </div>
+
+            <div class="tools">
+                <button id="add-marker-btn" class="tool-btn active" title="Add Marker">
+                    <i class="fas fa-map-pin"></i> Add Marker
+                </button>
+                <button id="clear-markers-btn" class="tool-btn" title="Clear All Markers">
+                    <i class="fas fa-trash"></i> Clear Markers
+                </button>
+                <button id="reset-zoom-btn" class="tool-btn" title="Reset Zoom">
+                    <i class="fas fa-search-minus"></i> Reset Zoom
+                </button>
+            </div>
+
+            <div class="speed-control">
+                <label for="playback-speed">Speed:</label>
+                <select id="playback-speed">
+                    <option value="2000">Slow (2s)</option>
+                    <option value="1000" selected>Normal (1s)</option>
+                    <option value="500">Fast (0.5s)</option>
+                    <option value="200">Very Fast (0.2s)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="plot-container">
+            <div id="rf-plot"></div>
+            <div class="loading" id="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Loading RF data...</span>
+            </div>
+        </div>
+
+        <div class="markers-panel">
+            <h3><i class="fas fa-map-pin"></i> Markers</h3>
+            <div id="markers-list" class="markers-list">
+                <div class="no-markers">No markers added</div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <span id="status-text">Ready</span>
+            </div>
+            <div class="status-item">
+                <span id="cursor-info">Move cursor over graph for details</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
