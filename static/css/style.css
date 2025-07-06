@@ -74,7 +74,7 @@ body {
 /* Controls Styles */
 .controls {
     display: grid;
-    grid-template-columns: auto auto auto;
+    grid-template-columns: auto auto auto auto;
     gap: 20px;
     align-items: center;
     background: rgba(255, 255, 255, 0.1);
@@ -147,6 +147,33 @@ body {
 .tool-btn.active {
     background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
     border-color: #16a34a;
+}
+
+.tool-btn.auto-reload {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Pagination Styles */
+.pagination {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+}
+
+.page-info {
+    padding: 8px 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    font-weight: 600;
+    color: #4ade80;
 }
 
 .speed-control {
@@ -323,6 +350,11 @@ body {
         grid-template-columns: 1fr;
         gap: 15px;
         text-align: center;
+    }
+    
+    .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
     }
     
     .navigation {

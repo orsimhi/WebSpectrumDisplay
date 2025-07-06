@@ -2,17 +2,24 @@ class RFAmplitudeViewer {
     constructor() {
         this.data = [];
         this.currentIndex = 0;
+        this.currentPage = 1;
+        this.totalPages = 1;
+        this.totalRecords = 0;
+        this.perPage = 20;
         this.markers = [];
         this.isPlaying = false;
         this.playInterval = null;
         this.isMarkerMode = true;
         this.holdTimeout = null;
         this.holdInterval = null;
+        this.autoReload = false;
+        this.socket = null;
         
         this.init();
     }
 
     async init() {
+        this.initializeWebSocket();
         await this.loadData();
         this.setupEventListeners();
         if (this.data.length > 0) {
@@ -21,14 +28,112 @@ class RFAmplitudeViewer {
         this.hideLoading();
     }
 
-    async loadData() {
+    initializeWebSocket() {
         try {
-            const response = await fetch('/api/rf_data');
-            this.data = await response.json();
+            this.socket = io();
+            
+            this.socket.on('connect', () => {
+                console.log('Connected to WebSocket server');
+                this.showStatus('Connected to real-time updates', 'success');
+            });
+
+            this.socket.on('disconnect', () => {
+                console.log('Disconnected from WebSocket server');
+                this.showStatus('Disconnected from real-time updates', 'warning');
+            });
+
+            this.socket.on('live_data_update', (data) => {
+                if (this.autoReload && data && data.length > 0) {
+                    this.handleLiveDataUpdate(data);
+                }
+            });
+
+            this.socket.on('error', (error) => {
+                console.error('WebSocket error:', error);
+                this.showStatus(`WebSocket error: ${error.msg}`, 'error');
+            });
+
+        } catch (error) {
+            console.warn('WebSocket not available:', error);
+            this.showStatus('Real-time updates not available', 'warning');
+        }
+    }
+
+    handleLiveDataUpdate(newData) {
+        // Check if this is actually new data
+        const latestTimestamp = newData[0].timestamp;
+        const existingRecord = this.data.find(record => record.timestamp === latestTimestamp);
+        
+        if (!existingRecord) {
+            // Add new data to the beginning of our dataset
+            this.data.unshift(...newData);
+            this.totalRecords++;
             this.updateInfo();
+            this.showStatus('New RF data received', 'info');
+            
+            // If we're on the first page and first record, auto-update the display
+            if (this.currentPage === 1 && this.currentIndex === 0) {
+                this.displayRecord(0);
+            }
+        }
+    }
+
+    async loadData(page = 1, append = false) {
+        try {
+            const response = await fetch(`/api/rf_data?page=${page}&per_page=${this.perPage}`);
+            const result = await response.json();
+            
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            if (append) {
+                this.data.push(...result.records);
+            } else {
+                this.data = result.records;
+            }
+            
+            this.currentPage = result.page;
+            this.totalPages = Math.ceil(result.total / result.per_page);
+            this.totalRecords = result.total;
+            this.hasNext = result.has_next;
+            this.hasPrev = result.has_prev;
+            
+            this.updateInfo();
+            this.updatePaginationButtons();
+            
         } catch (error) {
             console.error('Error loading RF data:', error);
-            this.showStatus('Error loading data', 'error');
+            this.showStatus('Error loading data: ' + error.message, 'error');
+        }
+    }
+
+    async loadMoreData() {
+        if (this.hasNext) {
+            await this.loadData(this.currentPage + 1, true);
+            this.showStatus('Loaded more RF data', 'success');
+        } else {
+            this.showStatus('No more data to load', 'info');
+        }
+    }
+
+    async nextPage() {
+        if (this.hasNext) {
+            await this.loadData(this.currentPage + 1);
+            this.currentIndex = 0;
+            if (this.data.length > 0) {
+                await this.displayRecord(0);
+            }
+        }
+    }
+
+    async prevPage() {
+        if (this.hasPrev) {
+            await this.loadData(this.currentPage - 1);
+            this.currentIndex = 0;
+            if (this.data.length > 0) {
+                await this.displayRecord(0);
+            }
         }
     }
 
@@ -40,10 +145,16 @@ class RFAmplitudeViewer {
         document.getElementById('last-btn').addEventListener('click', () => this.goToLast());
         document.getElementById('play-btn').addEventListener('click', () => this.toggleAutoPlay());
 
+        // Pagination buttons
+        document.getElementById('prev-page-btn').addEventListener('click', () => this.prevPage());
+        document.getElementById('next-page-btn').addEventListener('click', () => this.nextPage());
+        document.getElementById('load-more-btn').addEventListener('click', () => this.loadMoreData());
+
         // Tool buttons
         document.getElementById('add-marker-btn').addEventListener('click', () => this.toggleMarkerMode());
         document.getElementById('clear-markers-btn').addEventListener('click', () => this.clearMarkers());
         document.getElementById('reset-zoom-btn').addEventListener('click', () => this.resetZoom());
+        document.getElementById('auto-reload-btn').addEventListener('click', () => this.toggleAutoReload());
 
         // Hold to navigate
         this.setupHoldNavigation('prev-btn', () => this.goToPrevious());
@@ -67,7 +178,7 @@ class RFAmplitudeViewer {
         button.addEventListener('mousedown', () => {
             this.holdTimeout = setTimeout(() => {
                 this.holdInterval = setInterval(action, 100);
-            }, 500); // Start fast navigation after 500ms hold
+            }, 500);
         });
 
         button.addEventListener('mouseup', () => {
@@ -115,6 +226,18 @@ class RFAmplitudeViewer {
                 e.preventDefault();
                 this.toggleMarkerMode();
                 break;
+            case 'r':
+                e.preventDefault();
+                this.toggleAutoReload();
+                break;
+            case 'PageDown':
+                e.preventDefault();
+                this.nextPage();
+                break;
+            case 'PageUp':
+                e.preventDefault();
+                this.prevPage();
+                break;
         }
     }
 
@@ -130,11 +253,15 @@ class RFAmplitudeViewer {
             const response = await fetch(`/api/plot/${recordId}`);
             const plotData = await response.json();
             
+            if (plotData.error) {
+                throw new Error(plotData.error);
+            }
+            
             await this.renderPlot(plotData);
-            this.showStatus(`Displaying record ${index + 1} of ${this.data.length}`, 'success');
+            this.showStatus(`Displaying record ${index + 1} of ${this.data.length} (Page ${this.currentPage})`, 'success');
         } catch (error) {
             console.error('Error displaying record:', error);
-            this.showStatus('Error displaying record', 'error');
+            this.showStatus('Error displaying record: ' + error.message, 'error');
         }
     }
 
@@ -203,7 +330,9 @@ class RFAmplitudeViewer {
             id: markerId,
             frequency: frequency,
             power: power,
-            recordIndex: this.currentIndex
+            recordIndex: this.currentIndex,
+            recordId: this.data[this.currentIndex].id,
+            timestamp: this.data[this.currentIndex].timestamp
         };
         
         this.markers.push(marker);
@@ -235,7 +364,8 @@ class RFAmplitudeViewer {
         const traces = plotDiv.data.filter(trace => !trace.name.includes('Marker'));
         
         // Add marker traces for current record
-        const currentMarkers = this.markers.filter(m => m.recordIndex === this.currentIndex);
+        const currentRecordId = this.data[this.currentIndex]?.id;
+        const currentMarkers = this.markers.filter(m => m.recordId === currentRecordId);
         
         currentMarkers.forEach(marker => {
             traces.push({
@@ -270,12 +400,14 @@ class RFAmplitudeViewer {
 
         const markersHTML = this.markers.map(marker => {
             const recordNum = marker.recordIndex + 1;
+            const timestamp = new Date(marker.timestamp).toLocaleString();
             return `
                 <div class="marker-item">
                     <div class="marker-info">
                         <span class="marker-freq">${marker.frequency.toFixed(2)} MHz</span>
                         <span class="marker-power">${marker.power.toFixed(2)} dBm</span>
                         <span class="marker-record">Record ${recordNum}</span>
+                        <span class="marker-time">${timestamp}</span>
                     </div>
                     <button class="marker-remove" onclick="viewer.removeMarker(${marker.id})">
                         <i class="fas fa-times"></i>
@@ -302,6 +434,26 @@ class RFAmplitudeViewer {
         }
     }
 
+    toggleAutoReload() {
+        this.autoReload = !this.autoReload;
+        const button = document.getElementById('auto-reload-btn');
+        
+        if (this.autoReload) {
+            button.classList.add('auto-reload');
+            button.innerHTML = '<i class="fas fa-sync-alt"></i> Auto Reload On';
+            this.showStatus('Auto-reload enabled - new data will load automatically', 'info');
+            
+            // Request live updates
+            if (this.socket) {
+                this.socket.emit('request_live_update');
+            }
+        } else {
+            button.classList.remove('auto-reload');
+            button.innerHTML = '<i class="fas fa-sync-alt"></i> Auto Reload';
+            this.showStatus('Auto-reload disabled', 'info');
+        }
+    }
+
     resetZoom() {
         const plotDiv = document.getElementById('rf-plot');
         Plotly.relayout(plotDiv, {
@@ -321,12 +473,26 @@ class RFAmplitudeViewer {
     goToPrevious() {
         if (this.currentIndex > 0) {
             this.displayRecord(this.currentIndex - 1);
+        } else if (this.hasPrev) {
+            // Load previous page and go to last record
+            this.prevPage().then(() => {
+                if (this.data.length > 0) {
+                    this.displayRecord(this.data.length - 1);
+                }
+            });
         }
     }
 
     goToNext() {
         if (this.currentIndex < this.data.length - 1) {
             this.displayRecord(this.currentIndex + 1);
+        } else if (this.hasNext) {
+            // Load next page and go to first record
+            this.nextPage().then(() => {
+                if (this.data.length > 0) {
+                    this.displayRecord(0);
+                }
+            });
         }
     }
 
@@ -355,6 +521,8 @@ class RFAmplitudeViewer {
         this.playInterval = setInterval(() => {
             if (this.currentIndex < this.data.length - 1) {
                 this.goToNext();
+            } else if (this.hasNext) {
+                this.goToNext(); // Will automatically load next page
             } else {
                 this.stopAutoPlay();
             }
@@ -379,23 +547,39 @@ class RFAmplitudeViewer {
     }
 
     updateNavigationButtons() {
-        document.getElementById('first-btn').disabled = this.currentIndex === 0;
-        document.getElementById('prev-btn').disabled = this.currentIndex === 0;
-        document.getElementById('next-btn').disabled = this.currentIndex === this.data.length - 1;
-        document.getElementById('last-btn').disabled = this.currentIndex === this.data.length - 1;
+        const isFirstRecord = this.currentIndex === 0 && !this.hasPrev;
+        const isLastRecord = this.currentIndex === this.data.length - 1 && !this.hasNext;
+        
+        document.getElementById('first-btn').disabled = isFirstRecord;
+        document.getElementById('prev-btn').disabled = isFirstRecord;
+        document.getElementById('next-btn').disabled = isLastRecord;
+        document.getElementById('last-btn').disabled = isLastRecord;
+    }
+
+    updatePaginationButtons() {
+        document.getElementById('prev-page-btn').disabled = !this.hasPrev;
+        document.getElementById('next-page-btn').disabled = !this.hasNext;
+        document.getElementById('load-more-btn').disabled = !this.hasNext;
+        document.getElementById('page-display').textContent = this.currentPage;
     }
 
     updateInfo() {
+        document.getElementById('current-page').textContent = this.currentPage;
+        document.getElementById('total-pages').textContent = this.totalPages;
+        document.getElementById('total-records').textContent = this.totalRecords;
+        
         if (this.data.length === 0) return;
         
-        document.getElementById('current-record').textContent = this.currentIndex + 1;
-        document.getElementById('total-records').textContent = this.data.length;
+        document.getElementById('current-record').textContent = 
+            (this.currentPage - 1) * this.perPage + this.currentIndex + 1;
         
         if (this.data[this.currentIndex]) {
             const record = this.data[this.currentIndex];
-            document.getElementById('current-timestamp').textContent = record.timestamp;
+            const timestamp = new Date(record.timestamp).toLocaleString();
+            document.getElementById('current-timestamp').textContent = timestamp;
             document.getElementById('current-cf').textContent = record.center_frequency.toFixed(1);
             document.getElementById('current-span').textContent = record.span.toFixed(1);
+            document.getElementById('current-device').textContent = record.device_id || 'Unknown';
         }
     }
 
@@ -433,5 +617,11 @@ style.textContent = `
     .status-error { color: #ef4444 !important; }
     .status-info { color: #3b82f6 !important; }
     .status-warning { color: #fbbf24 !important; }
+    
+    .marker-time {
+        font-size: 0.8rem;
+        opacity: 0.8;
+        color: #94a3b8;
+    }
 `;
 document.head.appendChild(style);

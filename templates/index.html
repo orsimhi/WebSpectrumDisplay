@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RF Amplitude Graph Viewer</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.2/socket.io.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -18,6 +19,10 @@
                     <span id="current-record">-</span> / <span id="total-records">-</span>
                 </div>
                 <div class="info-item">
+                    <span class="label">Page:</span>
+                    <span id="current-page">-</span> / <span id="total-pages">-</span>
+                </div>
+                <div class="info-item">
                     <span class="label">Timestamp:</span>
                     <span id="current-timestamp">-</span>
                 </div>
@@ -28,6 +33,10 @@
                 <div class="info-item">
                     <span class="label">Span:</span>
                     <span id="current-span">-</span> MHz
+                </div>
+                <div class="info-item">
+                    <span class="label">Device:</span>
+                    <span id="current-device">-</span>
                 </div>
             </div>
         </header>
@@ -60,6 +69,22 @@
                 </button>
                 <button id="reset-zoom-btn" class="tool-btn" title="Reset Zoom">
                     <i class="fas fa-search-minus"></i> Reset Zoom
+                </button>
+                <button id="auto-reload-btn" class="tool-btn" title="Auto Reload">
+                    <i class="fas fa-sync-alt"></i> Auto Reload
+                </button>
+            </div>
+
+            <div class="pagination">
+                <button id="prev-page-btn" class="nav-btn" title="Previous Page">
+                    <i class="fas fa-chevron-left"></i> Page
+                </button>
+                <span class="page-info">Page <span id="page-display">1</span></span>
+                <button id="next-page-btn" class="nav-btn" title="Next Page">
+                    Page <i class="fas fa-chevron-right"></i>
+                </button>
+                <button id="load-more-btn" class="nav-btn" title="Load More Records">
+                    <i class="fas fa-plus"></i> Load More
                 </button>
             </div>
 
