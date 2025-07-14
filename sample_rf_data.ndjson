@@ -1,0 +1,5 @@
+{"timestamp": "2024-01-01T12:00:00Z", "center_frequency": 2400.0, "span": 100.0, "device_id": "spectrum_analyzer_001", "location": "lab_a", "powers": [-85.2, -84.8, -85.1, -84.9, -45.2, -46.1, -47.3, -85.5, -84.7, -85.0]}
+{"timestamp": "2024-01-01T12:00:05Z", "center_frequency": 2405.0, "span": 100.0, "device_id": "spectrum_analyzer_001", "location": "lab_a", "powers": [-84.9, -85.2, -84.8, -84.6, -35.8, -36.2, -37.1, -85.1, -84.9, -85.3]}
+{"timestamp": "2024-01-01T12:00:10Z", "center_frequency": 2410.0, "span": 100.0, "device_id": "spectrum_analyzer_001", "location": "lab_a", "powers": [-85.0, -84.7, -85.2, -84.8, -42.1, -43.3, -44.0, -85.4, -84.6, -85.1]}
+{"timestamp": "2024-01-01T12:00:15Z", "center_frequency": 2415.0, "span": 100.0, "device_id": "spectrum_analyzer_002", "location": "lab_b", "powers": [-86.1, -85.8, -86.0, -85.7, -38.9, -39.5, -40.2, -86.2, -85.9, -86.1]}
+{"timestamp": "2024-01-01T12:00:20Z", "center_frequency": 2420.0, "span": 100.0, "device_id": "spectrum_analyzer_002", "location": "lab_b", "powers": [-85.6, -85.3, -85.8, -85.2, -41.7, -42.8, -43.5, -85.9, -85.4, -85.7]}
