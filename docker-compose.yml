@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: spectrum_timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: spectrum_data
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      TIMESCALEDB_TELEMETRY: off
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d spectrum_data"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - spectrum_network
+
+  # Optional: pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: spectrum_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@spectrum.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8080:80"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    networks:
+      - spectrum_network
+    profiles:
+      - admin
+
+volumes:
+  timescale_data:
+    driver: local
+
+networks:
+  spectrum_network:
+    driver: bridge
