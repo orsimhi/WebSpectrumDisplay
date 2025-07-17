@@ -1,0 +1,5 @@
+{"scan_time": "2024-01-15T10:30:00Z", "id": "scan_001", "instance_name": "analyzer_01", "config_info": {"cf": 2400000000.0, "span": 100000000.0, "sample_amount": 1024, "rbw": 100000.0, "vbw": 300000.0}}
+{"scan_time": "2024-01-15T10:31:00Z", "id": "scan_002", "instance_name": "analyzer_01", "config_info": {"cf": 2500000000.0, "span": 50000000.0, "sample_amount": 512, "rbw": 50000.0, "vbw": 150000.0}}
+{"scan_time": "2024-01-15T10:32:00Z", "id": "scan_003", "instance_name": "analyzer_02", "config_info": {"cf": 5800000000.0, "span": 200000000.0, "sample_amount": 2048, "rbw": 1000000.0, "vbw": 3000000.0, "antenna_gain": 3.5}}
+{"scan_time": "2024-01-15T10:33:00Z", "id": "scan_004", "instance_name": "analyzer_01", "config_info": {"cf": 2450000000.0, "span": 80000000.0, "sample_amount": 1024, "rbw": 100000.0, "vbw": 300000.0, "power_level": -20}}
+{"scan_time": "2024-01-15T10:34:00Z", "id": "scan_005", "instance_name": "analyzer_03", "config_info": {"cf": 915000000.0, "span": 30000000.0, "sample_amount": 256, "rbw": 30000.0, "vbw": 100000.0, "temperature": 25.5}}

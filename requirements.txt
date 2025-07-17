@@ -1,0 +1,9 @@
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.23
+timescale-vector==0.0.1
+python-dotenv==1.0.0
+pandas==2.1.4
+numpy==1.24.3
+pydantic==2.5.0
+click==8.1.7
+tqdm==4.66.1
