@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RF Spectrum Analyzer - Professional Analysis Suite</title>
+    
+    <!-- Plotly.js for interactive charts -->
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    
+    <!-- Socket.IO for real-time communication -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    
+    <!-- Bootstrap for UI components -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-satellite-dish me-2"></i>
+                RF Spectrum Analyzer
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item">
+                    <div class="connection-status" id="connectionStatus">
+                        <i class="fas fa-circle text-danger me-1"></i>
+                        <span>Disconnected</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-3">
+        <!-- Control Panel -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card control-panel">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-sliders-h me-2"></i>
+                            Control Panel
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <!-- Navigation Controls -->
+                            <div class="col-md-6">
+                                <div class="btn-group navigation-controls" role="group">
+                                    <button type="button" class="btn btn-outline-primary" id="firstBtn" title="First Record (Home)">
+                                        <i class="fas fa-fast-backward"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary" id="prevBtn" title="Previous Record (←)">
+                                        <i class="fas fa-step-backward"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success" id="autoplayBtn" title="Toggle Auto-play (Space)">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary" id="nextBtn" title="Next Record (→)">
+                                        <i class="fas fa-step-forward"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary" id="lastBtn" title="Last Record (End)">
+                                        <i class="fas fa-fast-forward"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Page Info -->
+                            <div class="col-md-3">
+                                <div class="page-info">
+                                    <span class="text-muted">Page:</span>
+                                    <strong id="currentPage">1</strong> of 
+                                    <strong id="totalPages">--</strong>
+                                    <span class="text-muted ms-2">Records:</span>
+                                    <strong id="totalRecords">--</strong>
+                                </div>
+                            </div>
+
+                            <!-- Analysis Controls -->
+                            <div class="col-md-3">
+                                <div class="btn-group analysis-controls" role="group">
+                                    <button type="button" class="btn btn-outline-info" id="peakAnalysisBtn" title="Peak Detection">
+                                        <i class="fas fa-mountain"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning" id="occupancyBtn" title="Spectrum Occupancy">
+                                        <i class="fas fa-chart-bar"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" id="clearMarkersBtn" title="Clear Markers (C)">
+                                        <i class="fas fa-eraser"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Row -->
+        <div class="row">
+            <!-- Spectrum Plot -->
+            <div class="col-lg-8">
+                <div class="card spectrum-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            RF Spectrum Analysis
+                        </h5>
+                        <div class="plot-controls">
+                            <button class="btn btn-sm btn-outline-secondary" id="resetZoomBtn" title="Reset Zoom (R)">
+                                <i class="fas fa-search-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-2">
+                        <div id="spectrumPlot" class="spectrum-plot"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Side Panel -->
+            <div class="col-lg-4">
+                <!-- Metadata Card -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Measurement Info
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="metadata-info">
+                            <div class="info-row">
+                                <span class="label">Timestamp:</span>
+                                <span class="value" id="timestamp">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Device:</span>
+                                <span class="value" id="deviceId">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Type:</span>
+                                <span class="value" id="measurementType">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Bandwidth:</span>
+                                <span class="value" id="bandwidth">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Gain:</span>
+                                <span class="value" id="gain">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis Results -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-pie me-2"></i>
+                            Analysis Results
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="analysisResults" class="analysis-results">
+                            <div class="text-muted text-center">
+                                <i class="fas fa-play-circle fa-2x mb-2"></i>
+                                <p>Click analysis buttons above to see results</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Markers -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-map-marker-alt me-2"></i>
+                            Markers
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="markersList" class="markers-list">
+                            <div class="text-muted text-center">
+                                <i class="fas fa-mouse-pointer fa-2x mb-2"></i>
+                                <p>Click on the spectrum to add markers</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Keyboard Shortcuts Modal -->
+        <div class="modal fade" id="shortcutsModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-keyboard me-2"></i>
+                            Keyboard Shortcuts
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-6">
+                                <h6>Navigation</h6>
+                                <ul class="list-unstyled">
+                                    <li><kbd>←</kbd> Previous record</li>
+                                    <li><kbd>→</kbd> Next record</li>
+                                    <li><kbd>Home</kbd> First record</li>
+                                    <li><kbd>End</kbd> Last record</li>
+                                    <li><kbd>Space</kbd> Toggle auto-play</li>
+                                </ul>
+                            </div>
+                            <div class="col-6">
+                                <h6>Analysis</h6>
+                                <ul class="list-unstyled">
+                                    <li><kbd>P</kbd> Peak detection</li>
+                                    <li><kbd>O</kbd> Occupancy analysis</li>
+                                    <li><kbd>C</kbd> Clear markers</li>
+                                    <li><kbd>R</kbd> Reset zoom</li>
+                                    <li><kbd>?</kbd> This help</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="loading-spinner">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <div class="mt-2">Loading spectrum data...</div>
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
