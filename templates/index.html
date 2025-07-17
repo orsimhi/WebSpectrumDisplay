@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RF Amplitude Graph Viewer</title>
+    <title>RF Spectrum Analyzer</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.2/socket.io.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -12,11 +12,11 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1><i class="fas fa-signal"></i> RF Amplitude Graph Viewer</h1>
+            <h1><i class="fas fa-radio"></i> RF Spectrum Analyzer</h1>
             <div class="info-panel">
                 <div class="info-item">
-                    <span class="label">Record:</span>
-                    <span id="current-record">-</span> / <span id="total-records">-</span>
+                    <span class="label">Scan:</span>
+                    <span id="current-scan">-</span> / <span id="total-scans">-</span>
                 </div>
                 <div class="info-item">
                     <span class="label">Page:</span>
@@ -35,66 +35,104 @@
                     <span id="current-span">-</span> MHz
                 </div>
                 <div class="info-item">
-                    <span class="label">Device:</span>
-                    <span id="current-device">-</span>
+                    <span class="label">Instance:</span>
+                    <span id="current-instance">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Config:</span>
+                    <span id="current-config">-</span>
                 </div>
             </div>
         </header>
 
         <div class="controls">
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="cf-filter">Center Freq (MHz):</label>
+                    <input type="number" id="cf-filter" placeholder="e.g. 2450" step="0.1">
+                </div>
+                <div class="filter-group">
+                    <label for="name-filter">Config Name:</label>
+                    <input type="text" id="name-filter" placeholder="e.g. WiFi_Analysis">
+                </div>
+                <div class="filter-group">
+                    <label for="instance-filter">Instance:</label>
+                    <input type="text" id="instance-filter" placeholder="e.g. Analyzer_001">
+                </div>
+                <div class="filter-group">
+                    <label for="time-filter">Time Range:</label>
+                    <select id="time-filter">
+                        <option value="">All Time</option>
+                        <option value="1h">Last Hour</option>
+                        <option value="6h">Last 6 Hours</option>
+                        <option value="24h" selected>Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                    </select>
+                </div>
+                <button id="apply-filters-btn" class="filter-btn">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
+                <button id="clear-filters-btn" class="filter-btn">
+                    <i class="fas fa-times"></i> Clear
+                </button>
+            </div>
+
             <div class="navigation">
-                <button id="first-btn" class="nav-btn" title="First Record">
+                <button id="first-btn" class="nav-btn" title="First Scan (Home)">
                     <i class="fas fa-step-backward"></i>
                 </button>
-                <button id="prev-btn" class="nav-btn" title="Previous Record">
+                <button id="prev-btn" class="nav-btn" title="Previous Scan (←)">
                     <i class="fas fa-chevron-left"></i>
                 </button>
-                <button id="play-btn" class="nav-btn play-btn" title="Auto Play">
+                <button id="play-btn" class="nav-btn play-btn" title="Auto Play (Space)">
                     <i class="fas fa-play"></i>
                 </button>
-                <button id="next-btn" class="nav-btn" title="Next Record">
+                <button id="next-btn" class="nav-btn" title="Next Scan (→)">
                     <i class="fas fa-chevron-right"></i>
                 </button>
-                <button id="last-btn" class="nav-btn" title="Last Record">
+                <button id="last-btn" class="nav-btn" title="Last Scan (End)">
                     <i class="fas fa-step-forward"></i>
                 </button>
             </div>
 
-            <div class="tools">
-                <button id="add-marker-btn" class="tool-btn active" title="Add Marker">
+            <div class="analysis-tools">
+                <div class="tool-group">
+                    <label for="analysis-preset">Analysis:</label>
+                    <select id="analysis-preset">
+                        <option value="">Select Analysis...</option>
+                    </select>
+                    <button id="apply-analysis-btn" class="tool-btn">
+                        <i class="fas fa-chart-line"></i> Analyze
+                    </button>
+                </div>
+                <button id="add-marker-btn" class="tool-btn" title="Add Marker (M)">
                     <i class="fas fa-map-pin"></i> Add Marker
                 </button>
-                <button id="clear-markers-btn" class="tool-btn" title="Clear All Markers">
-                    <i class="fas fa-trash"></i> Clear Markers
+                <button id="clear-markers-btn" class="tool-btn" title="Clear Markers">
+                    <i class="fas fa-trash"></i> Clear
                 </button>
-                <button id="reset-zoom-btn" class="tool-btn" title="Reset Zoom">
-                    <i class="fas fa-search-minus"></i> Reset Zoom
-                </button>
-                <button id="auto-reload-btn" class="tool-btn" title="Auto Reload">
-                    <i class="fas fa-sync-alt"></i> Auto Reload
+                <button id="reset-zoom-btn" class="tool-btn" title="Reset Zoom (R)">
+                    <i class="fas fa-search-minus"></i> Reset
                 </button>
             </div>
 
             <div class="pagination">
-                <button id="prev-page-btn" class="nav-btn" title="Previous Page">
+                <button id="prev-page-btn" class="nav-btn" title="Previous Page (Page Up)">
                     <i class="fas fa-chevron-left"></i> Page
                 </button>
                 <span class="page-info">Page <span id="page-display">1</span></span>
-                <button id="next-page-btn" class="nav-btn" title="Next Page">
+                <button id="next-page-btn" class="nav-btn" title="Next Page (Page Down)">
                     Page <i class="fas fa-chevron-right"></i>
-                </button>
-                <button id="load-more-btn" class="nav-btn" title="Load More Records">
-                    <i class="fas fa-plus"></i> Load More
                 </button>
             </div>
 
             <div class="speed-control">
                 <label for="playback-speed">Speed:</label>
                 <select id="playback-speed">
-                    <option value="2000">Slow (2s)</option>
-                    <option value="1000" selected>Normal (1s)</option>
-                    <option value="500">Fast (0.5s)</option>
-                    <option value="200">Very Fast (0.2s)</option>
+                    <option value="3000">Slow (3s)</option>
+                    <option value="1500">Normal (1.5s)</option>
+                    <option value="750" selected>Fast (0.75s)</option>
+                    <option value="300">Very Fast (0.3s)</option>
                 </select>
             </div>
         </div>
@@ -103,23 +141,82 @@
             <div id="rf-plot"></div>
             <div class="loading" id="loading">
                 <i class="fas fa-spinner fa-spin"></i>
-                <span>Loading RF data...</span>
+                <span>Loading RF spectrum data...</span>
             </div>
         </div>
 
-        <div class="markers-panel">
-            <h3><i class="fas fa-map-pin"></i> Markers</h3>
-            <div id="markers-list" class="markers-list">
-                <div class="no-markers">No markers added</div>
+        <div class="side-panels">
+            <div class="markers-panel">
+                <h3><i class="fas fa-map-pin"></i> Markers</h3>
+                <div id="markers-list" class="markers-list">
+                    <div class="no-markers">No markers added</div>
+                </div>
+            </div>
+
+            <div class="analysis-panel">
+                <h3><i class="fas fa-chart-line"></i> Analysis Results</h3>
+                <div id="analysis-results" class="analysis-results">
+                    <div class="no-analysis">No analysis performed</div>
+                </div>
             </div>
         </div>
 
         <div class="status-bar">
             <div class="status-item">
-                <span id="status-text">Ready</span>
+                <span id="status-text">Ready - Use arrow keys to navigate, space to play/pause</span>
             </div>
             <div class="status-item">
                 <span id="cursor-info">Move cursor over graph for details</span>
+            </div>
+            <div class="status-item">
+                <span id="keyboard-hint">Keyboard shortcuts: ←/→ navigate, Space play/pause, M add marker, R reset zoom</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Marker Dialog -->
+    <div id="marker-dialog" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-map-pin"></i> Add Marker</h3>
+                <button class="close-btn" onclick="closeMarkerDialog()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="marker-name">Marker Name:</label>
+                    <input type="text" id="marker-name" placeholder="e.g. Peak_1">
+                </div>
+                <div class="form-group">
+                    <label for="marker-frequency">Frequency (MHz):</label>
+                    <input type="number" id="marker-frequency" step="0.001" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="marker-power">Power (dBm):</label>
+                    <input type="number" id="marker-power" step="0.1" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="marker-type">Type:</label>
+                    <select id="marker-type">
+                        <option value="manual">Manual</option>
+                        <option value="peak">Peak</option>
+                        <option value="valley">Valley</option>
+                        <option value="reference">Reference</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="marker-notes">Notes:</label>
+                    <textarea id="marker-notes" placeholder="Optional notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="saveMarker()">
+                    <i class="fas fa-save"></i> Save Marker
+                </button>
+                <button class="btn btn-secondary" onclick="closeMarkerDialog()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
             </div>
         </div>
     </div>

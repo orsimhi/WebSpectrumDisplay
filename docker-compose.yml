@@ -1,28 +1,39 @@
 version: '3.8'
 
 services:
-  influxdb:
-    image: influxdb:2.7
-    container_name: rf-influxdb
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: rf-timescaledb
     ports:
-      - "8086:8086"
+      - "5432:5432"
     environment:
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=rf-password-123
-      - DOCKER_INFLUXDB_INIT_ORG=rf-org
-      - DOCKER_INFLUXDB_INIT_BUCKET=rf-amplitude-data
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=rf-amplitude-token
+      - POSTGRES_DB=rf_spectrum_db
+      - POSTGRES_USER=rf_user
+      - POSTGRES_PASSWORD=rf_password_123
     volumes:
-      - influxdb_data:/var/lib/influxdb2
-      - influxdb_config:/etc/influxdb2
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8086/ping"]
+      test: ["CMD-SHELL", "pg_isready -U rf_user -d rf_spectrum_db"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
+
+  rf-analyzer-app:
+    build: .
+    container_name: rf-analyzer-app
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://rf_user:rf_password_123@timescaledb:5432/rf_spectrum_db
+    volumes:
+      - .:/app
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:latest
@@ -34,12 +45,11 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
     depends_on:
-      - influxdb
+      - timescaledb
     restart: unless-stopped
     profiles:
       - monitoring
 
 volumes:
-  influxdb_data:
-  influxdb_config:
+  timescaledb_data:
   grafana_data:
