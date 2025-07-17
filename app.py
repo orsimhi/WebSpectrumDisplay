@@ -10,23 +10,58 @@ import threading
 import time
 import os
 import uuid
+import logging
+from pathlib import Path
 from sqlalchemy import text, desc, and_, or_
 from sqlalchemy.orm import joinedload
 
 from models import db, RFScan, AnalysisPreset, ScanMarker
 from analysis_tools import RFAnalysisTools
 
+# Create Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'rf_spectrum_analyzer_secret'
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+
+# Database configuration - Windows friendly paths
+DATABASE_URL = os.environ.get(
     'DATABASE_URL', 
     'postgresql://rf_user:rf_password_123@localhost:5432/rf_spectrum_db'
 )
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+}
+
+# Configure logging for Windows
+def setup_logging():
+    """Setup logging configuration for Windows"""
+    # Create logs directory if it doesn't exist
+    logs_dir = Path('logs')
+    logs_dir.mkdir(exist_ok=True)
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(logs_dir / 'rf_analyzer.log', encoding='utf-8'),
+            logging.StreamHandler()
+        ]
+    )
+    
+    # Set specific log levels
+    logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
+    logging.getLogger('werkzeug').setLevel(logging.WARNING)
+
+# Setup logging
+setup_logging()
+logger = logging.getLogger(__name__)
 
 # Initialize extensions
 db.init_app(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False)
 
 def init_database():
     """Initialize database and create sample data if needed"""
@@ -34,106 +69,19 @@ def init_database():
         try:
             # Test database connection
             db.session.execute(text('SELECT 1'))
-            print("✓ Connected to TimescaleDB successfully")
+            logger.info("✓ Connected to TimescaleDB successfully")
             
             # Check if we have data
             scan_count = db.session.query(RFScan).count()
             if scan_count == 0:
-                print("No RF scan data found, creating sample data...")
-                create_sample_data()
+                logger.info("No RF scan data found, database is ready for data generation")
+                logger.info("Run 'python sample_data_generator.py' to create sample data")
             else:
-                print(f"✓ Found {scan_count} RF scans in database")
+                logger.info(f"✓ Found {scan_count} RF scans in database")
                 
         except Exception as e:
-            print(f"⚠ Database error: {e}")
-
-def create_sample_data():
-    """Create sample RF scan data in TimescaleDB"""
-    try:
-        import random
-        base_time = datetime.now(timezone.utc)
-        
-        print("Creating sample RF scan data...")
-        
-        # Sample configurations
-        configs = [
-            {"name": "ISM_2.4G_Survey", "cf": 2450.0, "span": 100.0, "sample_amount": 1000, "rbw": 1.0, "vbw": 1.0, "ref_level": -30},
-            {"name": "WiFi_Analysis", "cf": 2437.0, "span": 50.0, "sample_amount": 800, "rbw": 0.5, "vbw": 0.5, "ref_level": -25},
-            {"name": "Bluetooth_Scan", "cf": 2440.0, "span": 80.0, "sample_amount": 1200, "rbw": 1.0, "vbw": 3.0, "ref_level": -40},
-        ]
-        
-        instance_names = ["Analyzer_001", "Analyzer_002", "Mobile_Unit_A"]
-        
-        for i in range(50):  # Create 50 sample scans
-            # Create timestamp (spread over last 24 hours)
-            timestamp = base_time - pd.Timedelta(hours=24-i*0.48)
-            
-            # Select random configuration
-            config = random.choice(configs)
-            
-            # Generate realistic RF power data
-            num_points = config["sample_amount"]
-            center_freq = config["cf"]
-            span = config["span"]
-            
-            # Calculate frequency axis
-            frequencies = RFAnalysisTools.calculate_frequency_axis(center_freq, span, num_points)
-            
-            # Create realistic RF spectrum with noise and signals
-            noise_floor = -85 + 5 * np.random.randn(num_points)
-            powers = noise_floor.tolist()
-            
-            # Add some signal peaks
-            for _ in range(random.randint(1, 4)):
-                peak_freq = random.uniform(center_freq - span/3, center_freq + span/3)
-                peak_idx = int((peak_freq - frequencies[0]) / (frequencies[1] - frequencies[0]))
-                if 0 <= peak_idx < num_points:
-                    peak_power = random.uniform(-50, -20)
-                    width = random.randint(3, 15)
-                    for j in range(max(0, peak_idx - width), min(num_points, peak_idx + width)):
-                        powers[j] = max(powers[j], peak_power - abs(j - peak_idx) * 0.8)
-            
-            # Create flags
-            flags = []
-            if max(powers) > -30:
-                flags.append("high_signal")
-            if any(p > -40 for p in powers):
-                flags.append("signal_detected")
-            
-            # Create RF scan record
-            scan = RFScan(
-                scan_time=timestamp,
-                scan_id=uuid.uuid4(),
-                flags=flags,
-                instance_name=random.choice(instance_names),
-                powers=powers,
-                config_info=config
-            )
-            
-            db.session.add(scan)
-            
-            # Add some markers for demonstration
-            if random.random() < 0.3:  # 30% chance of having markers
-                # Find peaks for automatic markers
-                detected_peaks = RFAnalysisTools.detect_peaks(powers, frequencies, threshold_dbm=-60)
-                for j, peak in enumerate(detected_peaks[:2]):  # Add up to 2 peak markers
-                    marker = ScanMarker(
-                        scan_time=timestamp,
-                        scan_id=scan.scan_id,
-                        marker_name=f"Peak_{j+1}",
-                        frequency_mhz=peak['frequency_mhz'],
-                        power_dbm=peak['power_dbm'],
-                        marker_type='peak',
-                        notes=f"Auto-detected peak with {peak['prominence']:.1f} dB prominence"
-                    )
-                    db.session.add(marker)
-        
-        db.session.commit()
-        print(f"✓ Created 50 sample RF scans with markers")
-        
-    except Exception as e:
-        print(f"Error creating sample data: {e}")
-        db.session.rollback()
+            logger.error(f"⚠ Database error: {e}")
+            logger.info("Make sure TimescaleDB is running and accessible")
 
 @app.route('/')
 def index():
@@ -195,7 +143,7 @@ def get_scans():
         })
         
     except Exception as e:
-        print(f"Error querying scans: {e}")
+        logger.error(f"Error querying scans: {e}")
         return jsonify({'error': 'Database query failed'}), 500
 
 @app.route('/api/scans/<scan_id>')
@@ -215,7 +163,7 @@ def get_scan(scan_id):
         return jsonify(scan_dict)
         
     except Exception as e:
-        print(f"Error getting scan: {e}")
+        logger.error(f"Error getting scan: {e}")
         return jsonify({'error': 'Database query failed'}), 500
 
 @app.route('/api/scans/navigate')
@@ -250,7 +198,7 @@ def navigate_scans():
         })
         
     except Exception as e:
-        print(f"Error navigating scans: {e}")
+        logger.error(f"Error navigating scans: {e}")
         return jsonify({'error': 'Navigation failed'}), 500
 
 @app.route('/api/plot/<scan_id>')
@@ -313,7 +261,7 @@ def get_plot_data(scan_id):
         })
         
     except Exception as e:
-        print(f"Error generating plot: {e}")
+        logger.error(f"Error generating plot: {e}")
         return jsonify({'error': 'Plot generation failed'}), 500
 
 @app.route('/api/analysis/presets')
@@ -323,7 +271,7 @@ def get_analysis_presets():
         presets = db.session.query(AnalysisPreset).all()
         return jsonify([preset.to_dict() for preset in presets])
     except Exception as e:
-        print(f"Error getting presets: {e}")
+        logger.error(f"Error getting presets: {e}")
         return jsonify({'error': 'Failed to get presets'}), 500
 
 @app.route('/api/analysis/apply/<scan_id>')
@@ -361,7 +309,7 @@ def apply_analysis(scan_id):
         })
         
     except Exception as e:
-        print(f"Error applying analysis: {e}")
+        logger.error(f"Error applying analysis: {e}")
         return jsonify({'error': 'Analysis failed'}), 500
 
 @app.route('/api/markers', methods=['POST'])
@@ -396,7 +344,7 @@ def add_marker():
         return jsonify(marker.to_dict()), 201
         
     except Exception as e:
-        print(f"Error adding marker: {e}")
+        logger.error(f"Error adding marker: {e}")
         db.session.rollback()
         return jsonify({'error': 'Failed to add marker'}), 500
 
@@ -414,19 +362,19 @@ def delete_marker(marker_id):
         return jsonify({'success': True})
         
     except Exception as e:
-        print(f"Error deleting marker: {e}")
+        logger.error(f"Error deleting marker: {e}")
         db.session.rollback()
         return jsonify({'error': 'Failed to delete marker'}), 500
 
 # WebSocket events for real-time updates
 @socketio.on('connect')
 def handle_connect():
-    print('Client connected')
+    logger.info('Client connected')
     emit('status', {'msg': 'Connected to RF Spectrum Analyzer'})
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    print('Client disconnected')
+    logger.info('Client disconnected')
 
 @socketio.on('keyboard_navigation')
 def handle_keyboard_navigation(data):
@@ -460,6 +408,7 @@ def handle_keyboard_navigation(data):
             emit('navigation_error', {'msg': f'No more scans in {direction} direction'})
             
     except Exception as e:
+        logger.error(f"Navigation error: {e}")
         emit('navigation_error', {'msg': f'Navigation failed: {e}'})
 
 def background_thread():
@@ -478,28 +427,33 @@ def background_thread():
                         'config_name': latest_scan.name
                     })
         except Exception as e:
-            print(f"Background update error: {e}")
+            logger.error(f"Background update error: {e}")
 
 if __name__ == '__main__':
-    print("Starting RF Spectrum Analyzer with TimescaleDB...")
-    print("=" * 60)
+    logger.info("Starting RF Spectrum Analyzer with TimescaleDB...")
+    logger.info("=" * 60)
     
     # Initialize database
     init_database()
     
     # Start background thread
-    thread = threading.Thread(target=background_thread)
-    thread.daemon = True
+    thread = threading.Thread(target=background_thread, daemon=True)
     thread.start()
     
-    print("\nStarting Flask-SocketIO server...")
-    print("Application available at: http://localhost:5000")
-    print("Features:")
-    print("  • TimescaleDB time-series storage")
-    print("  • Real-time data updates via WebSockets")
-    print("  • Advanced filtering by config_info fields")
-    print("  • Keyboard navigation between scans")
-    print("  • Analysis tools and presets")
-    print("  • Marker support for signal analysis")
+    logger.info("\nStarting Flask-SocketIO server...")
+    logger.info("Application available at: http://localhost:5000")
+    logger.info("Features:")
+    logger.info("  • TimescaleDB time-series storage")
+    logger.info("  • Real-time data updates via WebSockets")
+    logger.info("  • Advanced filtering by config_info fields")
+    logger.info("  • Keyboard navigation between scans")
+    logger.info("  • Analysis tools and presets")
+    logger.info("  • Marker support for signal analysis")
     
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+    try:
+        socketio.run(app, debug=True, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+    except KeyboardInterrupt:
+        logger.info("\nShutting down RF Spectrum Analyzer...")
+    except Exception as e:
+        logger.error(f"Error starting application: {e}")
+        input("Press Enter to exit...")

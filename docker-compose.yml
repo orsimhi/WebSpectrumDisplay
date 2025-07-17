@@ -10,10 +10,13 @@ services:
       - POSTGRES_DB=rf_spectrum_db
       - POSTGRES_USER=rf_user
       - POSTGRES_PASSWORD=rf_password_123
+      - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
-      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
     restart: unless-stopped
+    networks:
+      - rf_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U rf_user -d rf_spectrum_db"]
       interval: 30s
@@ -22,18 +25,25 @@ services:
       start_period: 30s
 
   rf-analyzer-app:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
     container_name: rf-analyzer-app
     ports:
       - "5000:5000"
     environment:
       - DATABASE_URL=postgresql://rf_user:rf_password_123@timescaledb:5432/rf_spectrum_db
+      - FLASK_ENV=development
+      - PYTHONPATH=/app
     volumes:
-      - .:/app
+      - .:/app:ro
+      - app_logs:/app/logs
     depends_on:
       timescaledb:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - rf_network
 
   grafana:
     image: grafana/grafana:latest
@@ -42,14 +52,26 @@ services:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=rf-grafana-123
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - timescaledb
     restart: unless-stopped
+    networks:
+      - rf_network
     profiles:
       - monitoring
 
+networks:
+  rf_network:
+    driver: bridge
+
 volumes:
   timescaledb_data:
+    driver: local
   grafana_data:
+    driver: local
+  app_logs:
+    driver: local

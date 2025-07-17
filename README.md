@@ -76,6 +76,12 @@ The application uses TimescaleDB with the following main tables:
 
 ## 🛠️ Installation & Setup
 
+### 🪟 Windows Users
+**For Windows users, we have dedicated setup scripts for easy installation:**
+- **Quick Start**: Double-click `setup.bat` for automatic Docker setup
+- **Development**: Use `setup_dev.bat` for local development environment
+- **Full Guide**: See [README_Windows.md](README_Windows.md) for complete Windows instructions
+
 ### Option 1: Docker Deployment (Recommended)
 
 1. **Clone the repository:**
@@ -86,7 +92,11 @@ cd rf-spectrum-analyzer
 
 2. **Start the application:**
 ```bash
+# Linux/macOS
 docker-compose up -d
+
+# Windows
+setup.bat
 ```
 
 This will start:
